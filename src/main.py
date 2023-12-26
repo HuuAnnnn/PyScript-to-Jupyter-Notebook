@@ -2,11 +2,6 @@ import os
 import re
 
 
-ROOT_PATH_FOLDER = "./samples"
-SRC_FILE = "train.py"
-TARGET_FILE = "result.ipynb"
-
-
 def load_file_from_folder(path: str, ignore: list[str] = []) -> list[str]:
     assert os.path.isdir(path), "The path must be a folder"
     traverse_files = os.listdir(path)
@@ -33,10 +28,36 @@ def load_file(path: str) -> str:
     return data
 
 
-def extract_import_and_script(script: str, pattern: str):
-    pattern = re.compile(r"(?<=\bdef\b)", re.DOTALL | re.MULTILINE)
+def get_script_from_folder(folder_structure: list) -> list[str]:
+    script_files = []
+    for child in folder_structure:
+        if type(child) == tuple:
+            _, files = child
+            script_files.extend(files)
+        else:
+            script_files.append(child)
+    return script_files
+
+
+def extract_import_and_script(
+    script: str,
+    pattern: str = r"(?<=\bdef\b)",
+) -> tuple[str, str]:
+    pattern = re.compile(pattern, re.DOTALL | re.MULTILINE)
+    match = pattern.search(script)
+    if match:
+        # Extract import and script parts
+        import_part = script[: match.start()]
+        script_part = script[match.start() :]
+        return import_part, script_part
+    else:
+        raise Exception("Not found")
 
 
 if __name__ == "__main__":
+    ROOT_PATH_FOLDER = "./samples"
+    SRC_FILE = "train.py"
+    TARGET_FILE = "result.ipynb"
     ignore = ["__pycache__"]
-    print(load_file_from_folder(ROOT_PATH_FOLDER, ignore))
+    files = load_file_from_folder(ROOT_PATH_FOLDER, ignore)
+    scripts = get_script_from_folder(files)
