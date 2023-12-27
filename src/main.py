@@ -1,24 +1,40 @@
 import os
 import re
+import nbformat
 
 
-def load_file_from_folder(path: str, ignore: list[str] = []) -> list[str]:
+def tree(path: str) -> list[str | list[str]]:
     assert os.path.isdir(path), "The path must be a folder"
     traverse_files = os.listdir(path)
-    sub_files = []
+    folder_structure = []
+    for file in traverse_files:
+        file_path = os.path.join(path, file)
+        if os.path.isdir(file_path):
+            children_files = tree(file_path)
+            folder_structure.append((file, children_files))
+        else:
+            folder_structure.append(file)
+    return folder_structure
 
-    # Using recursion to load all file from path
-    for file_path in traverse_files:
-        full_file_path = os.path.join(path, file_path)
-        if os.path.isdir(full_file_path) and file_path not in ignore:
-            folder_sub_files = load_file_from_folder(full_file_path, ignore)
-            sub_files.append((file_path, folder_sub_files))
 
-        # We just concern to the python script file for converting purpose
-        if ".py" in file_path:
-            sub_files.append(file_path)
+def find_path_file(parent: str, file_name: str):
+    path = []
+    traverse_files = os.listdir(parent)
+    for file in traverse_files:
+        file_path = os.path.join(parent, file)
+        if file_name == file:
+            path.extend([parent, file])
+            return path
+        if os.path.isdir(file_path):
+            sub_path = find_path_file(file_path, file_name)
+            if sub_path:
+                path.extend(sub_path)
+                return path
 
-    return sub_files
+
+def get_path_of_file(parent: str, file_name: str) -> str:
+    path = find_path_file(parent, file_name)
+    return os.path.join(*path)
 
 
 def load_file(path: str) -> str:
@@ -26,17 +42,6 @@ def load_file(path: str) -> str:
         data = f.read()
 
     return data
-
-
-def get_script_from_folder(folder_structure: list) -> list[str]:
-    script_files = []
-    for child in folder_structure:
-        if type(child) == tuple:
-            _, files = child
-            script_files.extend(files)
-        else:
-            script_files.append(child)
-    return script_files
 
 
 def extract_import_and_script(
@@ -54,10 +59,25 @@ def extract_import_and_script(
         raise Exception("Not found")
 
 
+def is_custom_package(import_script: str, script_files: list[str]) -> bool:
+    for script_file in script_files:
+        # Removing .py for comparing purpose
+        if script_file.replace(".py", "") in import_script:
+            return True
+    return False
+
+
+def classify_library(import_script: str):
+    lines = import_script.split("\n")
+    for line in lines:
+        pass
+
+
 if __name__ == "__main__":
     ROOT_PATH_FOLDER = "./samples"
-    SRC_FILE = "train.py"
+    SRC_FILE = "./samples/train.py"
     TARGET_FILE = "result.ipynb"
-    ignore = ["__pycache__"]
-    files = load_file_from_folder(ROOT_PATH_FOLDER, ignore)
-    scripts = get_script_from_folder(files)
+
+    # target_content = load_file(SRC_FILE)
+    # import_part, script_part = extract_import_and_script(target_content)
+    print(get_path_of_file(ROOT_PATH_FOLDER, "node2vec.py"))
